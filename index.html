@@ -1,0 +1,287 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuestBlox — Play • Explore • Discover</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<!-- ACCOUNT SCREEN -->
+<div id="authGate" class="auth-gate">
+  <section class="auth-panel">
+
+    <img
+      src="questblox-logo.png"
+      alt="QuestBlox"
+      class="auth-logo"
+    >
+
+    <h1>Welcome to QuestBlox</h1>
+    <p>Sign in or create an account to continue.</p>
+
+    <div class="auth-tabs">
+      <button id="tabLogin" class="selected" type="button">
+        Sign In
+      </button>
+
+      <button id="tabSignup" type="button">
+        Create Account
+      </button>
+    </div>
+
+    <form id="authForm">
+
+      <div id="usernameField" hidden>
+        <label>
+          Username
+          <input
+            id="authUsername"
+            type="text"
+            minlength="3"
+            maxlength="20"
+            pattern="[A-Za-z0-9_]{3,20}"
+            autocomplete="username"
+          >
+        </label>
+      </div>
+
+      <label>
+        Email
+        <input
+          id="authEmail"
+          type="email"
+          autocomplete="email"
+          required
+        >
+      </label>
+
+      <label>
+        Password
+        <input
+          id="authPassword"
+          type="password"
+          minlength="8"
+          autocomplete="current-password"
+          required
+        >
+      </label>
+
+      <div id="confirmField" hidden>
+        <label>
+          Confirm Password
+          <input
+            id="authConfirm"
+            type="password"
+            autocomplete="new-password"
+          >
+        </label>
+      </div>
+
+      <button class="auth-primary" id="authSubmit" type="submit">
+        Sign In
+      </button>
+
+    </form>
+
+    <button id="resetPassword" class="auth-link" type="button">
+      Forgot Password?
+    </button>
+
+    <p id="authMessage" role="status" aria-live="polite"></p>
+
+  </section>
+</div>
+
+
+<!-- MAIN WEBSITE -->
+<div id="siteShell" hidden>
+
+<header class="topbar">
+
+  <a href="#home" class="brand">
+    <img src="questblox-logo.png" alt="QuestBlox">
+  </a>
+
+  <nav class="navigation">
+    <a href="#home">Home</a>
+    <a href="#games">Games</a>
+    <a href="#categories">Categories</a>
+    <a href="#about">About</a>
+  </nav>
+
+  <div class="account-bar">
+    <span id="accountName"></span>
+    <button id="signOut" type="button">Sign Out</button>
+  </div>
+
+</header>
+
+
+<!-- HOME -->
+<section class="hero" id="home">
+
+  <div class="hero-content">
+
+    <img
+      src="questblox-logo.png"
+      alt="QuestBlox"
+      class="hero-logo"
+    >
+
+    <h1>Play • Explore • Discover</h1>
+
+    <p>
+      A collection of exciting browser games.
+      No downloads, just play!
+    </p>
+
+    <a href="#games" class="explore-btn">
+      Explore Games
+    </a>
+
+  </div>
+
+</section>
+
+
+<!-- CATEGORIES -->
+<section id="categories" class="categories-section">
+
+  <h2>Explore Categories</h2>
+
+  <div class="category-buttons">
+
+    <button data-filter="all" class="active">
+      All Games
+    </button>
+
+    <button data-filter="action">
+      Action
+    </button>
+
+    <button data-filter="puzzle">
+      Puzzle
+    </button>
+
+    <button data-filter="adventure">
+      Adventure
+    </button>
+
+    <button data-filter="sports">
+      Sports
+    </button>
+
+    <button data-filter="racing">
+      Racing
+    </button>
+
+    <button data-filter="multiplayer">
+      Multiplayer
+    </button>
+
+    <button data-filter="3d">
+      3D Games
+    </button>
+
+  </div>
+
+</section>
+
+
+<!-- GAMES -->
+<section id="games" class="games-section">
+
+  <div class="section-heading">
+
+    <h2>Featured Games</h2>
+
+    <input
+      type="search"
+      id="gameSearch"
+      placeholder="Search games..."
+      aria-label="Search games"
+    >
+
+  </div>
+
+  <div id="gameGrid" class="game-grid"></div>
+
+  <p id="noGames" hidden>
+    No games found. Try another search!
+  </p>
+
+</section>
+
+
+<!-- FRIENDS -->
+<section id="friends" class="friends-section">
+
+  <h2>Friends</h2>
+
+  <p>
+    Find your friends, see who's online,
+    and join their games!
+  </p>
+
+  <div id="friendsContainer"></div>
+
+</section>
+
+
+<!-- ABOUT -->
+<section id="about" class="about-section">
+
+  <h2>About QuestBlox</h2>
+
+  <p>
+    QuestBlox is a browser gaming hub where you can
+    discover exciting games, explore different genres,
+    and enjoy entertainment in one place.
+  </p>
+
+  <h3>Share QuestBlox</h3>
+
+  <div id="qrCode"></div>
+
+</section>
+
+
+<footer>
+  <p>QuestBlox — Play • Explore • Discover</p>
+</footer>
+
+</div>
+
+
+<!-- GAME WINDOW -->
+<dialog id="gameDialog">
+
+  <div class="game-window">
+
+    <div class="game-window-header">
+
+      <h2 id="gameTitle">Game</h2>
+
+      <button id="closeGame" type="button">
+        ✕
+      </button>
+
+    </div>
+
+    <div id="gameContent"></div>
+
+  </div>
+
+</dialog>
+
+
+<script type="module" src="auth.js"></script>
+<script src="games.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
