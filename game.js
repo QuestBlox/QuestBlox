@@ -3,7 +3,8 @@ const QUESTBLOX_GAMES = [
   {
     id: "blockcraft",
     title: "BlockCraft",
-    description: "Explore a blocky world, build structures and discover new adventures.",
+    description:
+      "Explore a blocky world, build structures and discover new adventures.",
     category: "3d",
     icon: "🧱",
     url: "https://devaniviaan-cell.github.io/BlockCraft/"
@@ -11,7 +12,8 @@ const QUESTBLOX_GAMES = [
   {
     id: "password",
     title: "Crack the Password",
-    description: "Use clever hints to discover the hidden password in minimum tries!",
+    description:
+      "Use clever hints to discover the hidden password in minimum tries!",
     category: "puzzle",
     icon: "🔐",
     url: "https://qpg-quick-playable-games.github.io/Crack-the-Password/"
@@ -19,9 +21,11 @@ const QUESTBLOX_GAMES = [
   {
     id: "foodtruck",
     title: "Curbside Food Truck Tycoon",
-    description: "Manage your own food truck and grow your business!",
+    description:
+      "Manage your own food truck and grow your business!",
     category: "adventure",
     icon: "🚚",
-    url: "https://devaniviaan-cell.github.io/Curbside-Food-Truck-Tycoon/"
+    url:
+      "https://devaniviaan-cell.github.io/Curbside-Food-Truck-Tycoon/"
   }
 ];
