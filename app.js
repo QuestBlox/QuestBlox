@@ -3,11 +3,6 @@ const gameGrid = document.getElementById("gameGrid");
 const gameSearch = document.getElementById("gameSearch");
 const noGames = document.getElementById("noGames");
 
-const gameDialog = document.getElementById("gameDialog");
-const gameTitle = document.getElementById("gameTitle");
-const gameContent = document.getElementById("gameContent");
-const closeGame = document.getElementById("closeGame");
-
 let activeCategory = "all";
 
 function renderGames() {
@@ -18,12 +13,13 @@ function renderGames() {
       activeCategory === "all" ||
       game.category === activeCategory;
 
-    const searchMatch =
-      game.title.toLowerCase().includes(query) ||
-      game.description.toLowerCase().includes(query) ||
-      game.category.toLowerCase().includes(query);
+    const searchableText = [
+      game.title,
+      game.description,
+      game.category
+    ].join(" ").toLowerCase();
 
-    return categoryMatch && searchMatch;
+    return categoryMatch && searchableText.includes(query);
   });
 
   gameGrid.replaceChildren();
@@ -47,9 +43,11 @@ function renderGames() {
     description.textContent = game.description;
 
     const playButton = document.createElement("button");
+    playButton.type = "button";
     playButton.className = "play-btn";
     playButton.textContent = "Play Now";
-    playButton.onclick = () => launchGame(game);
+
+    playButton.addEventListener("click", () => launchGame(game));
 
     card.append(
       icon,
@@ -65,15 +63,14 @@ function renderGames() {
   noGames.hidden = filtered.length !== 0;
 }
 
+// Category filters
 document.querySelectorAll("[data-filter]").forEach(button => {
   button.addEventListener("click", () => {
     activeCategory = button.dataset.filter;
 
-    document.querySelectorAll("[data-filter]").forEach(btn => {
-      btn.classList.remove("active");
+    document.querySelectorAll("[data-filter]").forEach(other => {
+      other.classList.toggle("active", other === button);
     });
-
-    button.classList.add("active");
 
     renderGames();
 
@@ -83,51 +80,25 @@ document.querySelectorAll("[data-filter]").forEach(button => {
   });
 });
 
+// Live search
 gameSearch.addEventListener("input", renderGames);
 
+// Open games in a new tab
 function launchGame(game) {
   if (document.getElementById("siteShell").hidden) return;
 
-  // Open the original game URL.
-  // Some external websites do not allow iframe embedding.
-  const url = new URL(game.url);
+  try {
+    const url = new URL(game.url);
 
-  if (url.protocol !== "https:") return;
+    if (url.protocol !== "https:") {
+      throw new Error("Only HTTPS game links are supported.");
+    }
 
-  window.open(url.href, "_blank", "noopener,noreferrer");
+    window.open(url.href, "_blank", "noopener,noreferrer");
+  } catch (error) {
+    console.error("Unable to launch game:", error);
+    alert("This game link is currently unavailable.");
+  }
 }
-
-closeGame.onclick = () => {
-  gameDialog.close();
-  gameContent.replaceChildren();
-};
-
-gameDialog.addEventListener("close", () => {
-  gameContent.replaceChildren();
-});
 
 renderGames();
-
-// Share QuestBlox using a QR code.
-function renderQRCode() {
-  const container = document.getElementById("qrCode");
-
-  const img = document.createElement("img");
-  const websiteURL = window.location.href.split("#")[0];
-
-  img.src =
-    "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" +
-    encodeURIComponent(websiteURL);
-
-  img.alt = "QuestBlox website QR code";
-  img.width = 150;
-  img.height = 150;
-
-  container.replaceChildren(img);
-}
-
-renderQRCode();
-
-// Friends will be connected to Firestore in the social update.
-document.getElementById("friendsContainer").textContent =
-  "Friends and live activity are coming in the next update.";
