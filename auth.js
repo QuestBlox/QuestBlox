@@ -1,6 +1,6 @@
 
 import { initializeApp } from
-  "https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";
+  "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
 
 import {
   getAuth,
@@ -12,7 +12,7 @@ import {
   updateProfile,
   sendPasswordResetEmail,
   signOut
-} from "https://www.gstatic.com/firebasejs/13.0.0/firebase-auth.js";
+} from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
 
 import { firebaseConfig } from "./firebase-config.js";
 
@@ -23,12 +23,24 @@ const $ = id => document.getElementById(id);
 
 let creatingAccount = false;
 
-setPersistence(auth, browserLocalPersistence).catch(error => {
-  $("authMessage").textContent =
-    "Persistent login is unavailable in this browser.";
-  console.error(error);
+// Password visibility
+document.querySelectorAll("[data-toggle-password]").forEach(button => {
+  button.addEventListener("click", () => {
+    const input = $(button.dataset.togglePassword);
+    const visible = input.type === "password";
+
+    input.type = visible ? "text" : "password";
+    button.textContent = visible ? "Hide" : "Show";
+
+    button.setAttribute("aria-pressed", String(visible));
+    button.setAttribute(
+      "aria-label",
+      `${visible ? "Hide" : "Show"} password`
+    );
+  });
 });
 
+// Switch between login and registration
 function switchMode(signup) {
   creatingAccount = signup;
 
@@ -52,21 +64,25 @@ function switchMode(signup) {
   $("authMessage").textContent = "";
 }
 
-$("tabLogin").onclick = () => switchMode(false);
-$("tabSignup").onclick = () => switchMode(true);
+$("tabLogin").addEventListener("click", () => switchMode(false));
+$("tabSignup").addEventListener("click", () => switchMode(true));
 
+// Keep players signed in between visits
+setPersistence(auth, browserLocalPersistence).catch(error => {
+  console.error("Persistence error:", error);
+});
+
+// Show the website only to signed-in users
 onAuthStateChanged(auth, user => {
   $("authGate").hidden = Boolean(user);
   $("siteShell").hidden = !user;
 
-  if (user) {
-    $("accountName").textContent =
-      user.displayName || user.email;
-  } else {
-    $("accountName").textContent = "";
-  }
+  $("accountName").textContent = user
+    ? (user.displayName || user.email || "Player")
+    : "";
 });
 
+// Register or sign in
 $("authForm").addEventListener("submit", async event => {
   event.preventDefault();
 
@@ -83,7 +99,7 @@ $("authForm").addEventListener("submit", async event => {
 
       if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) {
         throw new Error(
-          "Username must contain 3–20 letters, numbers or underscores."
+          "Username must have 3–20 letters, numbers or underscores."
         );
       }
 
@@ -102,7 +118,6 @@ $("authForm").addEventListener("submit", async event => {
       });
 
       $("accountName").textContent = username;
-
     } else {
       await signInWithEmailAndPassword(
         auth,
@@ -115,23 +130,21 @@ $("authForm").addEventListener("submit", async event => {
     $("authMessage").textContent = "";
 
   } catch (error) {
-    console.error(error.code || error.message);
+    console.error("Authentication error:", error);
 
     const messages = {
       "auth/email-already-in-use":
-        "An account already exists with this email.",
-
+        "That email is already registered.",
       "auth/invalid-email":
-        "Enter a valid email address.",
-
+        "Please enter a valid email address.",
       "auth/invalid-credential":
         "Incorrect email or password.",
-
       "auth/weak-password":
         "Please choose a stronger password.",
-
       "auth/too-many-requests":
-        "Too many attempts. Please try again later."
+        "Too many attempts. Try again later.",
+      "auth/network-request-failed":
+        "Network error. Check your internet connection."
     };
 
     $("authMessage").textContent =
@@ -144,7 +157,8 @@ $("authForm").addEventListener("submit", async event => {
   }
 });
 
-$("resetPassword").onclick = async () => {
+// Password reset
+$("resetPassword").addEventListener("click", async () => {
   const email = $("authEmail").value.trim();
 
   if (!email) {
@@ -158,18 +172,20 @@ $("resetPassword").onclick = async () => {
 
     $("authMessage").textContent =
       "If an account exists, a reset email will be sent.";
+  } catch (error) {
+    console.error(error);
 
-  } catch {
     $("authMessage").textContent =
-      "Unable to send reset email. Please try again.";
+      "Unable to send a reset email. Please try again.";
   }
-};
+});
 
-$("signOut").onclick = async () => {
+// Sign out
+$("signOut").addEventListener("click", async () => {
   try {
     await signOut(auth);
   } catch (error) {
     console.error(error);
     alert("Unable to sign out. Please try again.");
   }
-};
+});
