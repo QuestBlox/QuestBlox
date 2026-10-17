@@ -2,394 +2,1181 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f5f8ff">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>QuestBlox — Play • Explore • Discover</title>
-  
-<!-- QuestBlox Browser & App Icons -->
-<link rel="icon" type="image/png" href="./favicon.png">
-<link rel="apple-touch-icon" href="./icon-192.png">
+<title>QuestBlox — Play • Explore • Discover</title>
+
+<link rel="icon" type="image/png" href="./questblox-logo.png">
+<link rel="apple-touch-icon" href="./questblox-logo.png">
 <link rel="manifest" href="./manifest.json">
+<link rel="stylesheet" href="./style.css">
 
 <meta name="theme-color" content="#090d19">
-<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="QuestBlox">
 
+<style>
+/* QUESTBLOX SINGLE-URL SCREEN NAVIGATION */
 
-  <link rel="icon" type="image/png" href="./questblox-logo.png">
-  <link rel="apple-touch-icon" href="./questblox-logo.png">
-  <link rel="stylesheet" href="./style.css">
+#siteShell > section.qb-hidden-page {
+  display: none !important;
+}
+
+#siteShell > section.qb-active-page {
+  display: block;
+}
+
+#siteShell > section[hidden],
+#siteShell[hidden],
+#authGate[hidden] {
+  display: none !important;
+}
+
+/* FRIENDS SCREEN */
+
+#friends {
+  min-height: calc(100vh - 100px);
+  padding: 42px 5%;
+  background:
+    radial-gradient(
+      circle at 85% 10%,
+      rgba(109,88,255,.12),
+      transparent 38%
+    ),
+    #f5f8ff;
+  color: #202b45;
+}
+
+.friends-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.friends-eyebrow {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #6954ed;
+}
+
+.friends-header h2 {
+  font-size: clamp(30px,5vw,45px);
+  margin: 8px 0;
+}
+
+.friends-header p {
+  color: #68738b;
+}
+
+.friends-home-btn {
+  padding: 12px 18px;
+  border: 1px solid #d8dded;
+  background: white;
+  color: #202b45;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.friends-dashboard {
+  display: grid;
+  grid-template-columns: minmax(270px,1fr) minmax(0,1.6fr);
+  align-items: start;
+  gap: 22px;
+}
+
+.friends-card {
+  min-width: 0;
+  padding: 25px;
+  border: 1px solid #e0e5f2;
+  border-radius: 20px;
+  background: white;
+  box-shadow: 0 8px 30px rgba(28,41,80,.05);
+}
+
+.friends-card h3 {
+  margin: 0 0 10px;
+}
+
+.friends-card > p {
+  color: #778198;
+  font-size: 14px;
+}
+
+.friends-search-row {
+  display: flex;
+  gap: 9px;
+  margin: 20px 0;
+}
+
+.friends-search-row input {
+  min-width: 0;
+  flex: 1;
+  padding: 13px;
+  border: 1px solid #d8dfed;
+  border-radius: 10px;
+  font: inherit;
+}
+
+.friends-search-row button {
+  padding: 12px 18px;
+  background: #6954ed;
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.friends-results {
+  min-height: 60px;
+}
+
+.friends-tabs {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e5e8f1;
+  margin-bottom: 22px;
+}
+
+.friends-tab {
+  flex: 1;
+  padding: 12px 8px;
+  background: #f3f5fb;
+  color: #657087;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.friends-tab.active {
+  background: #6954ed;
+  color: white;
+}
+
+.friends-tab span {
+  margin-left: 4px;
+}
+
+.friends-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.friends-list-heading span {
+  font-size: 13px;
+  color: #8992a5;
+}
+
+.friends-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.friends-muted {
+  padding: 30px 12px;
+  text-align: center;
+  color: #8992a5;
+  background: #f7f8fc;
+  border: 1px dashed #d9deeb;
+  border-radius: 12px;
+}
+
+.friends-notice {
+  margin-top: 18px;
+  color: #6954ed;
+  font-weight: 600;
+}
+
+.friends-tab-content[hidden] {
+  display: none !important;
+}
+
+.friends-player {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e4e8f2;
+  border-radius: 12px;
+}
+
+.friends-avatar {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #eae6ff;
+  color: #6954ed;
+  font-weight: 800;
+}
+
+.friends-player-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.friends-player-info strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.friends-player-info small {
+  color: #8992a5;
+}
+
+@media(max-width:800px) {
+  .friends-dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .friends-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .friends-card {
+    padding: 17px;
+  }
+
+  .friends-search-row {
+    flex-wrap: wrap;
+  }
+}
+</style>
 </head>
 
 <body>
 
-  <!-- ACCOUNT SCREEN -->
-  <div id="authGate" class="auth-gate">
-    <main class="auth-panel">
+<!-- ACCOUNT SCREEN -->
+
+<div id="authGate" class="auth-gate">
+  <main class="auth-panel">
+
+    <img
+      class="auth-logo"
+      src="./questblox-logo.png"
+      alt="QuestBlox"
+    >
+
+    <h1>Welcome to QuestBlox</h1>
+    <p>Sign in or create an account to continue.</p>
+
+    <div class="auth-tabs">
+      <button id="tabLogin" class="selected" type="button">
+        Sign In
+      </button>
+
+      <button id="tabSignup" type="button">
+        Create Account
+      </button>
+    </div>
+
+    <form id="authForm">
+
+      <div id="usernameField" hidden>
+        <label for="authUsername">Username</label>
+
+        <input
+          id="authUsername"
+          type="text"
+          minlength="3"
+          maxlength="20"
+          pattern="[A-Za-z0-9_]{3,20}"
+          autocomplete="username"
+          placeholder="Your player username"
+        >
+      </div>
+
+      <div>
+        <label for="authEmail">Email</label>
+
+        <input
+          id="authEmail"
+          type="email"
+          autocomplete="email"
+          placeholder="Your email address"
+          required
+        >
+      </div>
+
+      <div>
+        <label for="authPassword">Password</label>
+
+        <div class="password-wrap">
+          <input
+            id="authPassword"
+            type="password"
+            minlength="8"
+            autocomplete="current-password"
+            required
+          >
+
+          <button
+            type="button"
+            class="password-eye"
+            data-toggle-password="authPassword"
+            aria-label="Show password"
+            aria-pressed="false"
+          >Show</button>
+        </div>
+      </div>
+
+      <div id="confirmField" hidden>
+        <label for="authConfirm">Confirm Password</label>
+
+        <div class="password-wrap">
+          <input
+            id="authConfirm"
+            type="password"
+            autocomplete="new-password"
+          >
+
+          <button
+            type="button"
+            class="password-eye"
+            data-toggle-password="authConfirm"
+            aria-label="Show confirmation password"
+            aria-pressed="false"
+          >Show</button>
+        </div>
+      </div>
+
+      <button
+        id="authSubmit"
+        class="primary-btn"
+        type="submit"
+      >
+        Sign In
+      </button>
+
+    </form>
+
+    <button
+      id="resetPassword"
+      class="text-btn"
+      type="button"
+    >
+      Forgot Password?
+    </button>
+
+    <p
+      id="authMessage"
+      class="auth-message"
+      role="status"
+      aria-live="polite"
+    ></p>
+
+  </main>
+</div>
+
+
+<!-- MAIN QUESTBLOX WEBSITE -->
+
+<div id="siteShell" hidden>
+
+  <!-- HEADER -->
+
+  <header class="topbar">
+
+    <a class="brand" href="#home" aria-label="QuestBlox home">
+      <img src="./questblox-logo.png" alt="QuestBlox">
+    </a>
+
+    <nav class="navigation" aria-label="Main navigation">
+      <a href="#home">Home</a>
+      <a href="#games">Games</a>
+      <a href="#categories">Categories</a>
+      <a href="#quests">Quests</a>
+      <a href="#leaderboard-section">Leaderboard</a>
+      <a href="#bucks">QuestBucks</a>
+      <a href="#friends">Friends</a>
+      <a href="#chat">Chat</a>
+      <a href="#submit">Submit Game</a>
+      <a href="#about">About</a>
+    </nav>
+
+    <div class="account-bar">
+      <span id="accountName">Player</span>
+
+      <button id="signOut" type="button">
+        Sign Out
+      </button>
+    </div>
+
+  </header>
+
+
+  <!-- HOME -->
+
+  <section class="hero" id="home">
+
+    <a
+      class="hero-qr"
+      href="https://questblox.github.io/QuestBlox/"
+      target="_blank"
+      rel="noopener noreferrer"
+      title="Share QuestBlox"
+    >
       <img
-        class="auth-logo"
+        src="./qr-code.png"
+        alt="QR code linking to QuestBlox"
+      >
+
+      <span>Scan to Play</span>
+    </a>
+
+    <div class="hero-content">
+
+      <img
+        class="hero-logo"
         src="./questblox-logo.png"
         alt="QuestBlox"
       >
 
-      <h1>Welcome to QuestBlox</h1>
-      <p>Sign in or create an account to continue.</p>
+      <h1>Play • Explore • Discover</h1>
 
-      <div class="auth-tabs">
-        <button id="tabLogin" class="selected" type="button">
-          Sign In
-        </button>
-        <button id="tabSignup" type="button">
-          Create Account
-        </button>
+      <p>
+        Discover exciting browser games, explore challenges
+        and be part of a growing gaming community.
+      </p>
+
+      <div class="hero-actions">
+
+        <a class="primary-btn" href="#games">
+          Explore Games
+        </a>
+
+        <a class="secondary-btn" href="#quests">
+          View Quests
+        </a>
+
       </div>
+    </div>
 
-      <form id="authForm">
-        <div id="usernameField" hidden>
-          <label for="authUsername">Username</label>
-          <input
-            id="authUsername"
-            type="text"
-            minlength="3"
-            maxlength="20"
-            pattern="[A-Za-z0-9_]{3,20}"
-            autocomplete="username"
-            placeholder="Your player username"
-          >
-        </div>
+  </section>
 
-        <div>
-          <label for="authEmail">Email</label>
-          <input
-            id="authEmail"
-            type="email"
-            autocomplete="email"
-            placeholder="Your email address"
-            required
-          >
-        </div>
 
-        <div>
-          <label for="authPassword">Password</label>
-          <div class="password-wrap">
-            <input
-              id="authPassword"
-              type="password"
-              minlength="8"
-              autocomplete="current-password"
-              required
-            >
-            <button
-              type="button"
-              class="password-eye"
-              data-toggle-password="authPassword"
-              aria-label="Show password"
-              aria-pressed="false"
-            >Show</button>
-          </div>
-        </div>
+  <!-- CATEGORIES -->
 
-        <div id="confirmField" hidden>
-          <label for="authConfirm">Confirm Password</label>
-          <div class="password-wrap">
-            <input
-              id="authConfirm"
-              type="password"
-              autocomplete="new-password"
-            >
-            <button
-              type="button"
-              class="password-eye"
-              data-toggle-password="authConfirm"
-              aria-label="Show confirmation password"
-              aria-pressed="false"
-            >Show</button>
-          </div>
-        </div>
+  <section id="categories" class="section">
 
-        <button id="authSubmit" class="primary-btn" type="submit">
-          Sign In
-        </button>
-      </form>
+    <div class="section-heading">
+      <h2>Explore Categories</h2>
+      <p>Find the type of game you love.</p>
+    </div>
 
-      <button id="resetPassword" class="text-btn" type="button">
-        Forgot Password?
+    <div class="category-buttons">
+
+      <button class="active" data-filter="all" type="button">
+        All
       </button>
 
-      <p id="authMessage" class="auth-message" role="status" aria-live="polite"></p>
-    </main>
-  </div>
+      <button data-filter="action" type="button">
+        Action
+      </button>
 
-  <!-- MAIN WEBSITE -->
-  <div id="siteShell" hidden>
+      <button data-filter="puzzle" type="button">
+        Puzzle
+      </button>
 
-    <header class="topbar">
-      <a class="brand" href="#home" aria-label="QuestBlox home">
-        <img src="./questblox-logo.png" alt="QuestBlox">
-      </a>
+      <button data-filter="adventure" type="button">
+        Adventure
+      </button>
 
-      <nav class="navigation" aria-label="Main navigation">
-        <a href="#home">Home</a>
-        <a href="#games">Games</a>
-        <a href="#categories">Categories</a>
-        <a href="#quests">Quests</a>
-        <a href="#leaderboard-section">Leaderboard</a>
-        <a href="#bucks">Bucks</a>
-        <a href="#friends">Friends</a>
-        <a href="#chat">Chat</a>
-        <a href="#submit">Submit Game</a>
-        <a href="#about">About</a>
-      </nav>
+      <button data-filter="sports" type="button">
+        Sports
+      </button>
 
-      <div class="account-bar">
-        <span id="accountName">Player</span>
-        <button id="signOut" type="button">Sign Out</button>
+      <button data-filter="racing" type="button">
+        Racing
+      </button>
+
+      <button data-filter="multiplayer" type="button">
+        Multiplayer
+      </button>
+
+      <button data-filter="3d" type="button">
+        3D Games
+      </button>
+
+    </div>
+
+  </section>
+
+
+  <!-- GAMES -->
+
+  <section id="games" class="section">
+
+    <div class="section-heading heading-with-search">
+
+      <div>
+        <h2>Featured Games</h2>
+        <p>Choose a game and start playing.</p>
       </div>
-    </header>
 
-    <!-- HOME -->
-    <section class="hero" id="home">
-
-      <a
-        class="hero-qr"
-        href="https://questblox.github.io/QuestBlox/"
-        target="_blank"
-        rel="noopener noreferrer"
-        title="Share QuestBlox"
+      <input
+        id="gameSearch"
+        type="search"
+        placeholder="Search games..."
+        aria-label="Search games"
       >
-        <img src="./qr-code.png" alt="QR code linking to QuestBlox">
-        <span>Scan to Play</span>
-      </a>
 
-      <div class="hero-content">
-        <img
-          class="hero-logo"
-          src="./questblox-logo.png"
-          alt="QuestBlox"
-        >
+    </div>
 
-        <h1>Play • Explore • Discover</h1>
+    <div id="gameGrid" class="game-grid"></div>
 
-        <p>
-          Discover exciting browser games, explore challenges
-          and be part of a growing gaming community.
+    <p id="noGames" class="empty-message" hidden>
+      No games found. Try another search or category.
+    </p>
+
+  </section>
+
+
+  <!-- QUESTS -->
+
+  <section id="quests" class="section">
+
+    <div class="section-heading heading-with-search">
+
+      <div>
+        <h2>QuestBlox Quests</h2>
+        <p>Discover challenges and future XP rewards.</p>
+      </div>
+
+      <span id="playerXP" class="xp-pill">
+        XP: Not activated
+      </span>
+
+    </div>
+
+    <div id="questGrid" class="quest-grid"></div>
+
+  </section>
+
+
+  <!-- LEADERBOARD -->
+
+  <section id="leaderboard-section" class="section">
+
+    <div class="section-heading">
+      <h2>Global Leaderboard</h2>
+      <p>Players will be ranked by verified XP.</p>
+    </div>
+
+    <div id="leaderboard" class="panel">
+      Global rankings are coming soon.
+    </div>
+
+  </section>
+
+
+  <!-- QUESTBUCKS -->
+
+  <section id="bucks" class="section">
+
+    <div class="section-heading">
+      <h2>QuestBucks</h2>
+      <p>The QuestBlox virtual currency.</p>
+    </div>
+
+    <div class="panel bucks-panel">
+
+      <div class="bucks-symbol">QB</div>
+
+      <div>
+        <h3>Your QuestBucks Wallet</h3>
+
+        <p id="bucksBalance">
+          Wallet not activated yet.
         </p>
 
-        <div class="hero-actions">
-          <a class="primary-btn" href="#games">Explore Games</a>
-          <a class="secondary-btn" href="#quests">View Quests</a>
+        <p>
+          QuestBucks will eventually be earned through eligible
+          quests and used in games that support them.
+        </p>
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- FRIENDS -->
+
+  <section id="friends" class="section">
+
+    <div class="friends-header">
+
+      <div>
+        <span class="friends-eyebrow">
+          QUESTBLOX SOCIAL
+        </span>
+
+        <h2>Friends</h2>
+
+        <p>
+          Find players and build your QuestBlox squad.
+        </p>
+      </div>
+
+      <button
+        class="friends-home-btn"
+        type="button"
+        onclick="qbOpenPage('home')"
+      >
+        ← Back to Home
+      </button>
+
+    </div>
+
+
+    <div class="friends-dashboard">
+
+      <!-- PLAYER SEARCH -->
+
+      <div class="friends-card">
+
+        <h3>Find a Player</h3>
+
+        <p>
+          Search using their QuestBlox username.
+        </p>
+
+        <div class="friends-search-row">
+
+          <input
+            id="friendSearch"
+            type="search"
+            maxlength="20"
+            placeholder="Enter username..."
+            autocomplete="off"
+          >
+
+          <button id="friendSearchBtn" type="button">
+            Search
+          </button>
+
         </div>
-      </div>
-    </section>
 
-    <!-- CATEGORIES -->
-    <section id="categories" class="section">
-      <div class="section-heading">
-        <h2>Explore Categories</h2>
-        <p>Find the type of game you love.</p>
-      </div>
-
-      <div class="category-buttons">
-        <button class="active" data-filter="all" type="button">All</button>
-        <button data-filter="action" type="button">Action</button>
-        <button data-filter="puzzle" type="button">Puzzle</button>
-        <button data-filter="adventure" type="button">Adventure</button>
-        <button data-filter="sports" type="button">Sports</button>
-        <button data-filter="racing" type="button">Racing</button>
-        <button data-filter="multiplayer" type="button">Multiplayer</button>
-        <button data-filter="3d" type="button">3D Games</button>
-      </div>
-    </section>
-
-    <!-- GAMES -->
-    <section id="games" class="section">
-      <div class="section-heading heading-with-search">
-        <div>
-          <h2>Featured Games</h2>
-          <p>Choose a game and start playing.</p>
-        </div>
-
-        <input
-          id="gameSearch"
-          type="search"
-          placeholder="Search games..."
-          aria-label="Search games"
+        <div
+          id="friendSearchResults"
+          class="friends-results"
         >
-      </div>
-
-      <div id="gameGrid" class="game-grid"></div>
-
-      <p id="noGames" class="empty-message" hidden>
-        No games found. Try another search or category.
-      </p>
-    </section>
-
-    <!-- QUESTS -->
-    <section id="quests" class="section">
-      <div class="section-heading heading-with-search">
-        <div>
-          <h2>QuestBlox Quests</h2>
-          <p>Discover challenges and future XP rewards.</p>
-        </div>
-        <span id="playerXP" class="xp-pill">XP: Not activated</span>
-      </div>
-
-      <div id="questGrid" class="quest-grid"></div>
-    </section>
-
-    <!-- LEADERBOARD -->
-    <section id="leaderboard-section" class="section">
-      <div class="section-heading">
-        <h2>Global Leaderboard</h2>
-        <p>Players will be ranked by verified XP.</p>
-      </div>
-
-      <div id="leaderboard" class="panel">
-        Global rankings are coming soon.
-      </div>
-    </section>
-
-    <!-- BUCKS -->
-    <section id="bucks" class="section">
-      <div class="section-heading">
-        <h2>QuestBlox Bucks</h2>
-        <p>A future virtual currency for participating games.</p>
-      </div>
-
-      <div class="panel bucks-panel">
-        <div class="bucks-symbol">B$</div>
-        <div>
-          <h3>Your Bucks Wallet</h3>
-          <p id="bucksBalance">Wallet not activated yet.</p>
-          <p>
-            Bucks will eventually be earned through eligible quests
-            and used in games that support them.
+          <p class="friends-muted">
+            Search for a player to get started.
           </p>
         </div>
-      </div>
-    </section>
 
-    <!-- FRIENDS -->
-    <section id="friends" class="section">
-      <div class="section-heading">
-        <h2>Friends</h2>
-        <p>Find players, connect and enjoy games together.</p>
       </div>
 
-      <div class="panel">
-        <label for="friendSearch">Search for a username</label>
-        <input
-          id="friendSearch"
-          type="search"
-          placeholder="Username search coming soon"
-          disabled
+
+      <!-- FRIENDS DASHBOARD -->
+
+      <div class="friends-card">
+
+        <div class="friends-tabs">
+
+          <button
+            class="friends-tab active"
+            type="button"
+            data-friend-tab="all"
+          >
+            My Friends
+          </button>
+
+          <button
+            class="friends-tab"
+            type="button"
+            data-friend-tab="requests"
+          >
+            Requests
+            <span id="friendRequestCount">0</span>
+          </button>
+
+          <button
+            class="friends-tab"
+            type="button"
+            data-friend-tab="sent"
+          >
+            Sent
+          </button>
+
+        </div>
+
+
+        <!-- MY FRIENDS -->
+
+        <div
+          id="friendsAll"
+          class="friends-tab-content"
         >
 
-        <div class="friend-preview">
-          <div class="avatar">QB</div>
-          <div>
-            <h3>Friend Profile Preview</h3>
-            <p>Player actions will appear here after friends go live.</p>
+          <div class="friends-list-heading">
+
+            <h3>My Friends</h3>
+
+            <span id="friendTotal">
+              0 friends
+            </span>
+
           </div>
+
+          <div id="friendsList" class="friends-list">
+
+            <p class="friends-muted">
+              Your friends will appear here.
+            </p>
+
+          </div>
+
         </div>
 
-        <div id="friendActions" class="action-grid"></div>
-        <p id="friendNotice" class="helper-text" role="status"></p>
-      </div>
-    </section>
 
-    <!-- CHAT -->
-    <section id="chat" class="section">
-      <div class="section-heading">
-        <h2>QuestBlox Chat</h2>
-        <p>Private conversations with accepted friends are planned.</p>
-      </div>
+        <!-- RECEIVED REQUESTS -->
 
-      <div class="chat-preview panel">
-        <aside>
-          <h3>Chats</h3>
-          <p>Friends will appear here.</p>
-        </aside>
+        <div
+          id="friendsRequests"
+          class="friends-tab-content"
+          hidden
+        >
 
-        <div class="chat-main">
-          <h3>Your Conversations</h3>
-          <p>Secure friend messaging is coming soon.</p>
-          <input
-            type="text"
-            placeholder="Messaging is not activated"
-            disabled
-            aria-label="Chat preview"
+          <h3>Friend Requests</h3>
+
+          <div
+            id="receivedFriendRequests"
+            class="friends-list"
           >
+
+            <p class="friends-muted">
+              No incoming requests.
+            </p>
+
+          </div>
+
         </div>
-      </div>
-    </section>
 
-    <!-- SUBMIT GAME -->
-    <section id="submit" class="section">
-      <div class="section-heading">
-        <h2>Submit Your Game</h2>
-        <p>Share a browser game for manual developer review.</p>
-      </div>
 
-      <div class="panel submit-panel">
-        <h3>Game Submissions</h3>
-        <p>
-          Soon, signed-in players will be able to submit a game title,
-          description, category and game URL.
-        </p>
-        <p>
-          Every submission will require developer approval.
-          Games will never publish automatically.
-        </p>
-        <span class="coming-soon">Submission system coming soon</span>
-      </div>
-    </section>
+        <!-- SENT REQUESTS -->
 
-    <!-- ABOUT -->
-    <section id="about" class="section">
-      <div class="section-heading">
-        <h2>About QuestBlox</h2>
+        <div
+          id="friendsSent"
+          class="friends-tab-content"
+          hidden
+        >
+
+          <h3>Sent Requests</h3>
+
+          <div
+            id="sentFriendRequests"
+            class="friends-list"
+          >
+
+            <p class="friends-muted">
+              No pending requests.
+            </p>
+
+          </div>
+
+        </div>
+
       </div>
 
-      <div class="panel about-content">
-        <p>
-          QuestBlox is a growing browser-game hub designed to make
-          discovering and enjoying games simple. Explore different
-          genres, jump into creative challenges and find new favourites
-          without installing a separate app.
-        </p>
+    </div>
+
+    <!-- EXISTING SOCIAL SCRIPT COMPATIBILITY -->
+
+    <div id="friendActions" class="action-grid" hidden></div>
+
+    <p
+      id="friendNotice"
+      class="friends-notice"
+      role="status"
+      aria-live="polite"
+    ></p>
+
+  </section>
+
+
+  <!-- CHAT -->
+
+  <section id="chat" class="section">
+
+    <div class="section-heading">
+      <h2>QuestBlox Chat</h2>
+
+      <p>
+        Private conversations with accepted friends are planned.
+      </p>
+    </div>
+
+    <div class="chat-preview panel">
+
+      <aside>
+        <h3>Chats</h3>
+        <p>Friends will appear here.</p>
+      </aside>
+
+      <div class="chat-main">
+
+        <h3>Your Conversations</h3>
 
         <p>
-          We're building more than a collection of game links.
-          Our plans include player profiles, verified quests, XP rankings,
-          a virtual Bucks economy, friend connections, private friend
-          messaging and multiplayer features in games that support them.
-          These features will be released progressively and tested
-          before they go live.
+          Secure friend messaging is coming soon.
         </p>
 
-        <p>
-          Creators will also be able to submit their own games for manual
-          review, helping QuestBlox grow while keeping publication in
-          the developers' hands.
-        </p>
+        <input
+          type="text"
+          placeholder="Messaging is not activated"
+          disabled
+          aria-label="Chat preview"
+        >
 
-        <p><strong>QuestBlox is developed by Viaan, Aadvik and Arsh.</strong></p>
       </div>
-    </section>
 
-    <footer>
-      <p>QuestBlox — Play • Explore • Discover</p>
-    </footer>
-  </div>
+    </div>
 
-  <script type="module" src="./auth.js"></script>
-  <script src="./games.js"></script>
-  <script src="./app.js"></script>
-  <script type="module" src="./quests.js"></script>
-  <script src="./social.js"></script>
+  </section>
+
+
+  <!-- SUBMIT GAME -->
+
+  <section id="submit" class="section">
+
+    <div class="section-heading">
+
+      <h2>Submit Your Game</h2>
+
+      <p>
+        Share a browser game for manual developer review.
+      </p>
+
+    </div>
+
+    <div class="panel submit-panel">
+
+      <h3>Game Submissions</h3>
+
+      <p>
+        Soon, signed-in players will be able to submit a game title,
+        description, category and game URL.
+      </p>
+
+      <p>
+        Every submission will require developer approval.
+        Games will never publish automatically.
+      </p>
+
+      <span class="coming-soon">
+        Submission system coming soon
+      </span>
+
+    </div>
+
+  </section>
+
+
+  <!-- ABOUT -->
+
+  <section id="about" class="section">
+
+    <div class="section-heading">
+      <h2>About QuestBlox</h2>
+    </div>
+
+    <div class="panel about-content">
+
+      <p>
+        QuestBlox is a growing browser-game hub designed to make
+        discovering and enjoying games simple. Explore different
+        genres, jump into creative challenges and find new favourites
+        without installing a separate app.
+      </p>
+
+      <p>
+        We're building more than a collection of game links.
+        Our plans include player profiles, verified quests,
+        XP rankings, QuestBucks, friend connections,
+        private friend messaging and multiplayer features
+        in games that support them.
+      </p>
+
+      <p>
+        These features will be released progressively
+        and tested before they go live.
+      </p>
+
+      <p>
+        Creators will also be able to submit their own games
+        for manual review, helping QuestBlox grow while
+        keeping publication in the developers' hands.
+      </p>
+
+      <p>
+        <strong>
+          QuestBlox is developed by Viaan, Aadvik and Arsh.
+        </strong>
+      </p>
+
+    </div>
+
+  </section>
+
+
+  <!-- FOOTER -->
+
+  <footer>
+    <p>QuestBlox — Play • Explore • Discover</p>
+  </footer>
+
+</div>
+
+
+<!-- EXISTING QUESTBLOX SCRIPTS -->
+
+<script type="module" src="./auth.js"></script>
+<script src="./games.js"></script>
+<script src="./app.js"></script>
+<script type="module" src="./quests.js"></script>
+<script src="./social.js"></script>
+
+
+<!-- NEW QUESTBLOX SCREEN SYSTEM -->
+
+<script>
+(function () {
+  "use strict";
+
+  const pages = [
+    "home",
+    "categories",
+    "games",
+    "quests",
+    "leaderboard-section",
+    "bucks",
+    "friends",
+    "chat",
+    "submit",
+    "about"
+  ];
+
+  const homeGroup = [
+    "home",
+    "categories",
+    "games"
+  ];
+
+  function openPage(page) {
+
+    if (!pages.includes(page)) {
+      page = "home";
+    }
+
+    const sections = document.querySelectorAll(
+      "#siteShell > section"
+    );
+
+    sections.forEach(section => {
+      section.classList.add("qb-hidden-page");
+      section.classList.remove("qb-active-page");
+    });
+
+    const showPages = homeGroup.includes(page)
+      ? homeGroup
+      : [page];
+
+    showPages.forEach(id => {
+      const section = document.getElementById(id);
+
+      if (section) {
+        section.classList.remove("qb-hidden-page");
+        section.classList.add("qb-active-page");
+      }
+    });
+
+    const footer = document.querySelector(
+      "#siteShell > footer"
+    );
+
+    if (footer) {
+      footer.style.display =
+        homeGroup.includes(page) ? "" : "none";
+    }
+
+    window.scrollTo(0, 0);
+
+    if (page === "games" || page === "categories") {
+      requestAnimationFrame(() => {
+        document.getElementById(page)?.scrollIntoView({
+          behavior: "smooth",
+          block: "start"
+        });
+      });
+    }
+
+    document.querySelectorAll(
+      '#siteShell .navigation a[href^="#"]'
+    ).forEach(link => {
+
+      const target = link.getAttribute("href").slice(1);
+
+      link.classList.toggle(
+        "active",
+        target === page
+      );
+
+    });
+  }
+
+  window.qbOpenPage = openPage;
+
+
+  /* NAVIGATION WITHOUT URL CHANGES */
+
+  document.querySelectorAll(
+    '#siteShell a[href^="#"]'
+  ).forEach(link => {
+
+    link.addEventListener("click", event => {
+
+      const target = link.getAttribute("href").slice(1);
+
+      if (!pages.includes(target)) {
+        return;
+      }
+
+      event.preventDefault();
+
+      openPage(target);
+
+    });
+
+  });
+
+
+  /* FRIENDS TABS */
+
+  const friendTabs = {
+    all: "friendsAll",
+    requests: "friendsRequests",
+    sent: "friendsSent"
+  };
+
+  document.querySelectorAll(
+    "[data-friend-tab]"
+  ).forEach(button => {
+
+    button.addEventListener("click", () => {
+
+      const selected = button.dataset.friendTab;
+
+      document.querySelectorAll(
+        "[data-friend-tab]"
+      ).forEach(tab => {
+
+        tab.classList.toggle(
+          "active",
+          tab.dataset.friendTab === selected
+        );
+
+      });
+
+      Object.entries(friendTabs).forEach(([key, id]) => {
+
+        const panel = document.getElementById(id);
+
+        if (panel) {
+          panel.hidden = key !== selected;
+        }
+
+      });
+
+    });
+
+  });
+
+
+  /* FRIEND SEARCH VALIDATION */
+
+  const friendSearch = document.getElementById(
+    "friendSearch"
+  );
+
+  const friendSearchBtn = document.getElementById(
+    "friendSearchBtn"
+  );
+
+  const friendNotice = document.getElementById(
+    "friendNotice"
+  );
+
+  const friendResults = document.getElementById(
+    "friendSearchResults"
+  );
+
+  function searchPlayer() {
+
+    const username = friendSearch.value.trim();
+
+    if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) {
+
+      friendNotice.textContent =
+        "Enter a valid username (3–20 letters, numbers or underscores).";
+
+      return;
+    }
+
+    friendNotice.textContent =
+      "Online player search is awaiting the Friends database connection.";
+
+    friendResults.replaceChildren();
+
+    const message = document.createElement("p");
+
+    message.className = "friends-muted";
+
+    message.textContent =
+      "Player search will become available when the Friends backend is connected.";
+
+    friendResults.appendChild(message);
+
+  }
+
+  friendSearchBtn.addEventListener(
+    "click",
+    searchPlayer
+  );
+
+  friendSearch.addEventListener(
+    "keydown",
+    event => {
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        searchPlayer();
+      }
+
+    }
+  );
+
+
+  /* START ON HOME */
+
+  openPage("home");
+
+})();
+</script>
 
 </body>
 </html>
