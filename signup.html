@@ -1,0 +1,187 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QuestBlox — Sign Up</title>
+
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;display:grid;place-items:center;
+  background:#090d19;color:white;font-family:Arial,sans-serif;
+  padding:20px
+}
+.card{
+  width:100%;max-width:420px;background:#151d30;
+  border:1px solid #34425c;border-radius:18px;padding:28px
+}
+h1{margin-top:0}
+p{color:#aebbd0;line-height:1.5}
+label{display:block;margin:16px 0 7px}
+input{
+  width:100%;padding:13px;border-radius:9px;
+  border:1px solid #44536e;background:#0b1220;color:white;
+  font-size:15px
+}
+button{
+  width:100%;padding:14px;margin-top:18px;border:0;
+  border-radius:9px;background:#7965ff;color:white;
+  font-weight:bold;font-size:15px;cursor:pointer
+}
+button:disabled{opacity:.5;cursor:wait}
+a{color:#a99bff}
+#message{min-height:24px;overflow-wrap:anywhere}
+.hidden{display:none}
+.cf-turnstile{margin-top:20px}
+</style>
+</head>
+
+<body>
+<main class="card">
+  <h1>QuestBlox</h1>
+  <p>Create your account. Private testing is currently enabled.</p>
+
+  <form id="signup">
+    <label for="username">Username</label>
+    <input id="username" autocomplete="username"
+      minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}" required>
+
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="email" required>
+
+    <label for="password">Password (12–128 characters)</label>
+    <input id="password" type="password"
+      autocomplete="new-password" minlength="12" maxlength="128" required>
+
+    <label for="confirm">Confirm password</label>
+    <input id="confirm" type="password"
+      autocomplete="new-password" required>
+
+    <label>
+      <input id="showPassword" type="checkbox" style="width:auto">
+      Show passwords
+    </label>
+
+    <div class="cf-turnstile"
+      data-sitekey="0x4AAAAAAFYpefOw0Mzo59s6"></div>
+
+    <button id="signupBtn" type="submit">Create Account</button>
+  </form>
+
+  <form id="verification" class="hidden">
+    <h2>Verify your email</h2>
+    <p>Enter the 8-digit code sent to your email.</p>
+
+    <label for="code">Verification code</label>
+    <input id="code" inputmode="numeric" pattern="[0-9]{8}"
+      maxlength="8" autocomplete="one-time-code" required>
+
+    <button id="verifyBtn" type="submit">Verify Account</button>
+  </form>
+
+  <p id="message" role="status" aria-live="polite"></p>
+  <p><a href="./">Back to QuestBlox</a></p>
+</main>
+
+<script>
+const API = "https://questblox-auth.devaniviaan.workers.dev";
+
+const signup = document.getElementById("signup");
+const verification = document.getElementById("verification");
+const message = document.getElementById("message");
+const signupBtn = document.getElementById("signupBtn");
+const verifyBtn = document.getElementById("verifyBtn");
+
+let pendingUsername = "";
+
+document.getElementById("showPassword").onchange = e => {
+  const type = e.target.checked ? "text" : "password";
+  document.getElementById("password").type = type;
+  document.getElementById("confirm").type = type;
+};
+
+async function post(path, data) {
+  const response = await fetch(API + path, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(data)
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.error || "Request failed");
+  }
+
+  return result;
+}
+
+signup.onsubmit = async e => {
+  e.preventDefault();
+
+  const username = document.getElementById("username").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const confirm = document.getElementById("confirm").value;
+
+  if (password !== confirm) {
+    message.textContent = "Passwords do not match.";
+    return;
+  }
+
+  const turnstileToken =
+    document.querySelector('[name="cf-turnstile-response"]')?.value;
+
+  if (!turnstileToken) {
+    message.textContent = "Complete the security check.";
+    return;
+  }
+
+  signupBtn.disabled = true;
+  message.textContent = "Creating account...";
+
+  try {
+    const result = await post("/auth/register", {
+      username, email, password, turnstileToken
+    });
+
+    pendingUsername = result.username;
+    signup.classList.add("hidden");
+    verification.classList.remove("hidden");
+    message.textContent = "Verification email sent. Check your inbox.";
+  } catch (error) {
+    message.textContent = error.message;
+    if (window.turnstile) turnstile.reset();
+  } finally {
+    signupBtn.disabled = false;
+  }
+};
+
+verification.onsubmit = async e => {
+  e.preventDefault();
+
+  verifyBtn.disabled = true;
+  message.textContent = "Verifying...";
+
+  try {
+    const result = await post("/auth/verify", {
+      username: pendingUsername,
+      code: document.getElementById("code").value.trim()
+    });
+
+    verification.classList.add("hidden");
+    message.textContent =
+      "Account verified successfully! Login will be enabled in the next stage.";
+  } catch (error) {
+    message.textContent = error.message;
+  } finally {
+    verifyBtn.disabled = false;
+  }
+};
+</script>
+</body>
+</html>
