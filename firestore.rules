@@ -1,0 +1,213 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================
+    // HELPERS
+    // ============================================
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() &&
+        request.auth.uid == uid;
+    }
+
+    function validUsername(username) {
+      return username is string &&
+        username.matches(
+          '^[A-Za-z0-9_]{3,20}$'
+        );
+    }
+
+    function validUsernameKey(key) {
+      return key is string &&
+        key.matches(
+          '^[a-z0-9_]{3,20}$'
+        );
+    }
+
+    function usernamePath(key) {
+      return /databases/$(database)/documents/usernames/$(key);
+    }
+
+    function profilePath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function validUsernameRecord(key) {
+      return signedIn() &&
+
+        validUsernameKey(key) &&
+
+        request.resource.data.keys().hasAll([
+          'uid',
+          'username',
+          'usernameKey',
+          'createdAt'
+        ]) &&
+
+        request.resource.data.keys().hasOnly([
+          'uid',
+          'username',
+          'usernameKey',
+          'createdAt'
+        ]) &&
+
+        request.resource.data.uid ==
+          request.auth.uid &&
+
+        validUsername(
+          request.resource.data.username
+        ) &&
+
+        request.resource.data.usernameKey == key &&
+
+        request.resource.data.username.lower() == key &&
+
+        request.resource.data.createdAt == request.time;
+    }
+
+    function validProfileRecord(uid) {
+      return isOwner(uid) &&
+
+        request.resource.data.keys().hasAll([
+          'uid',
+          'username',
+          'usernameKey',
+          'createdAt'
+        ]) &&
+
+        request.resource.data.keys().hasOnly([
+          'uid',
+          'username',
+          'usernameKey',
+          'createdAt'
+        ]) &&
+
+        request.resource.data.uid == uid &&
+
+        validUsername(
+          request.resource.data.username
+        ) &&
+
+        validUsernameKey(
+          request.resource.data.usernameKey
+        ) &&
+
+        request.resource.data.username.lower() ==
+          request.resource.data.usernameKey &&
+
+        request.resource.data.createdAt == request.time;
+    }
+
+    // ============================================
+    // UNIQUE USERNAME RESERVATIONS
+    // ============================================
+
+    match /usernames/{usernameKey} {
+
+      // Allows signed-in players to check whether
+      // a particular username is already reserved.
+      // Do not expose email addresses here.
+
+      allow get: if signedIn();
+
+      // Do not permit downloading the entire
+      // username collection.
+
+      allow list: if false;
+
+      // Username record must match the player's
+      // profile created in the SAME atomic batch.
+
+      allow create: if
+        validUsernameRecord(usernameKey) &&
+
+        getAfter(
+          profilePath(request.auth.uid)
+        ).data.uid == request.auth.uid &&
+
+        getAfter(
+          profilePath(request.auth.uid)
+        ).data.username ==
+          request.resource.data.username &&
+
+        getAfter(
+          profilePath(request.auth.uid)
+        ).data.usernameKey == usernameKey &&
+
+        getAfter(
+          profilePath(request.auth.uid)
+        ).data.createdAt == request.time;
+
+      // Nobody can overwrite, rename or delete
+      // a reserved username from the browser.
+
+      allow update, delete: if false;
+    }
+
+    // ============================================
+    // PLAYER PROFILES
+    // ============================================
+
+    match /users/{uid} {
+
+      // Players can read their own profile.
+
+      allow get: if isOwner(uid);
+
+      allow list: if false;
+
+      // Profile creation requires a matching
+      // username reservation in the SAME batch.
+
+      allow create: if
+        validProfileRecord(uid) &&
+
+        getAfter(
+          usernamePath(
+            request.resource.data.usernameKey
+          )
+        ).data.uid == uid &&
+
+        getAfter(
+          usernamePath(
+            request.resource.data.usernameKey
+          )
+        ).data.username ==
+          request.resource.data.username &&
+
+        getAfter(
+          usernamePath(
+            request.resource.data.usernameKey
+          )
+        ).data.usernameKey ==
+          request.resource.data.usernameKey &&
+
+        getAfter(
+          usernamePath(
+            request.resource.data.usernameKey
+          )
+        ).data.createdAt == request.time;
+
+      // Locked until we implement secure profile
+      // editing in a later QuestBlox task.
+
+      allow update, delete: if false;
+    }
+
+    // ============================================
+    // EVERYTHING ELSE REMAINS LOCKED
+    // ============================================
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+  }
+}
