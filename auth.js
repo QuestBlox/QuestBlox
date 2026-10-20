@@ -1,6 +1,9 @@
 
-import { initializeApp } from
-  "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+import {
+  initializeApp,
+  getApps,
+  getApp
+} from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
 
 import {
   getAuth,
@@ -11,8 +14,7 @@ import {
   signInWithEmailAndPassword,
   updateProfile,
   sendPasswordResetEmail,
-  signOut,
-  deleteUser
+  signOut
 } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
 
 import {
@@ -25,35 +27,39 @@ import {
 
 import { firebaseConfig } from "./firebase-config.js";
 
-// ===============================================
+// ============================================
 // FIREBASE
-// ===============================================
+// ============================================
 
-const app = initializeApp(firebaseConfig);
+const app = getApps().length
+  ? getApp()
+  : initializeApp(firebaseConfig);
 
 const auth = getAuth(app);
 const db = getFirestore(app);
 
 const $ = id => document.getElementById(id);
 
-let creatingAccount = false;
-let busy = false;
-
 const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,20}$/;
 
-// ===============================================
-// USERNAME HELPERS
-// ===============================================
+let creatingAccount = false;
+let busy = false;
+let registrationInProgress = false;
+let authStateVersion = 0;
+
+// ============================================
+// HELPERS
+// ============================================
 
 function normalizeUsername(username) {
   return username.trim().toLowerCase();
 }
 
-function validateUsername(username) {
+function validUsername(username) {
   return USERNAME_PATTERN.test(username);
 }
 
-function usernameReference(username) {
+function usernameRef(username) {
   return doc(
     db,
     "usernames",
@@ -61,8 +67,24 @@ function usernameReference(username) {
   );
 }
 
-function profileReference(uid) {
+function profileRef(uid) {
   return doc(db, "users", uid);
+}
+
+function message(text) {
+  $("authMessage").textContent = text;
+}
+
+function showWebsite(username) {
+  $("accountName").textContent = username || "Player";
+  $("authGate").hidden = true;
+  $("siteShell").hidden = false;
+}
+
+function showLogin() {
+  $("authGate").hidden = false;
+  $("siteShell").hidden = true;
+  $("accountName").textContent = "";
 }
 
 function readableError(error) {
@@ -71,42 +93,63 @@ function readableError(error) {
       "That email address is already registered.",
 
     "auth/invalid-email":
-      "Please enter a valid email address.",
+      "Enter a valid email address.",
 
     "auth/invalid-credential":
       "Incorrect email or password.",
 
     "auth/weak-password":
-      "Please choose a stronger password.",
+      "Choose a stronger password.",
 
     "auth/too-many-requests":
       "Too many attempts. Try again later.",
 
     "auth/network-request-failed":
-      "Network error. Check your internet connection.",
+      "Network error. Check your connection.",
 
     "permission-denied":
-      "That username may already be taken, or your account setup was rejected. Try another username.",
+      "The database rejected account setup. Check the published Firestore rules.",
 
     "unavailable":
-      "The database is temporarily unavailable. Try again."
+      "The database is temporarily unavailable."
   };
 
-  return (
-    messages[error.code] ||
+  return messages[error.code] ||
     error.message ||
-    "Something went wrong. Please try again."
-  );
+    "Something went wrong. Please try again.";
 }
 
-// ===============================================
+// ============================================
 // PASSWORD SHOW / HIDE
-// ===============================================
+// ============================================
+
+function resetPasswordVisibility() {
+  for (const id of ["authPassword", "authConfirm"]) {
+    const input = $(id);
+
+    const button = document.querySelector(
+      `[data-toggle-password="${id}"]`
+    );
+
+    if (!input || !button) continue;
+
+    input.type = "password";
+    button.textContent = "Show";
+
+    button.setAttribute("aria-pressed", "false");
+
+    button.setAttribute(
+      "aria-label",
+      id === "authConfirm"
+        ? "Show confirmation password"
+        : "Show password"
+    );
+  }
+}
 
 document.querySelectorAll(
   "[data-toggle-password]"
 ).forEach(button => {
-
   button.addEventListener("click", () => {
     const input = $(button.dataset.togglePassword);
 
@@ -115,7 +158,6 @@ document.querySelectorAll(
     const show = input.type === "password";
 
     input.type = show ? "text" : "password";
-
     button.textContent = show ? "Hide" : "Show";
 
     button.setAttribute(
@@ -132,12 +174,11 @@ document.querySelectorAll(
       `${show ? "Hide" : "Show"} ${label}`
     );
   });
-
 });
 
-// ===============================================
-// LOGIN / REGISTRATION TABS
-// ===============================================
+// ============================================
+// LOGIN / SIGNUP TABS
+// ============================================
 
 function switchMode(signup) {
   creatingAccount = signup;
@@ -168,33 +209,8 @@ function switchMode(signup) {
     ? "new-password"
     : "current-password";
 
-  // Reset password visibility whenever tabs change.
-
-  for (const id of ["authPassword", "authConfirm"]) {
-    const input = $(id);
-
-    if (!input) continue;
-
-    input.type = "password";
-
-    const button = document.querySelector(
-      `[data-toggle-password="${id}"]`
-    );
-
-    if (!button) continue;
-
-    button.textContent = "Show";
-    button.setAttribute("aria-pressed", "false");
-
-    button.setAttribute(
-      "aria-label",
-      id === "authConfirm"
-        ? "Show confirmation password"
-        : "Show password"
-    );
-  }
-
-  $("authMessage").textContent = "";
+  resetPasswordVisibility();
+  message("");
 }
 
 $("tabLogin").addEventListener(
@@ -207,168 +223,149 @@ $("tabSignup").addEventListener(
   () => switchMode(true)
 );
 
-// ===============================================
-// FIRESTORE USERNAME RESERVATION
-// ===============================================
-
-// Creates BOTH records in a single atomic batch.
-//
-// usernames/{lowercaseUsername}
-// users/{firebaseAuthUID}
-//
-// Firestore rules enforce that neither record can
-// be created alone and that both match the same UID.
+// ============================================
+// ATOMIC USERNAME RESERVATION
+// ============================================
 
 async function reserveUsername(user, username) {
-  const cleanUsername = username.trim();
+  const clean = username.trim();
 
-  if (!validateUsername(cleanUsername)) {
+  if (!validUsername(clean)) {
     throw new Error(
       "Username must contain 3–20 letters, numbers or underscores."
     );
   }
 
-  const usernameKey = normalizeUsername(cleanUsername);
+  const key = normalizeUsername(clean);
 
-  const usernameRef = usernameReference(cleanUsername);
-  const profileRef = profileReference(user.uid);
+  const nameDocument = usernameRef(clean);
+  const userDocument = profileRef(user.uid);
 
-  // This is only an early user-friendly check.
-  // The security rules enforce uniqueness during commit.
-  const existing = await getDoc(usernameRef);
+  const existing = await getDoc(nameDocument);
 
   if (existing.exists()) {
     throw new Error(
-      "That username is already taken. Please choose another."
+      "That username is already taken."
     );
   }
 
   const batch = writeBatch(db);
 
-  batch.set(usernameRef, {
+  batch.set(nameDocument, {
     uid: user.uid,
-    username: cleanUsername,
-    usernameKey,
+    username: clean,
+    usernameKey: key,
     createdAt: serverTimestamp()
   });
 
-  batch.set(profileRef, {
+  batch.set(userDocument, {
     uid: user.uid,
-    username: cleanUsername,
-    usernameKey,
+    username: clean,
+    usernameKey: key,
     createdAt: serverTimestamp()
   });
 
   await batch.commit();
 
-  return cleanUsername;
+  return clean;
 }
 
-// ===============================================
-// EXISTING ACCOUNT MIGRATION
-// ===============================================
+// ============================================
+// EXISTING ACCOUNT SUPPORT
+// ============================================
 
-// Older QuestBlox accounts may have a Firebase Auth
-// displayName but no Firestore username reservation.
-//
-// This attempts to reserve their existing name.
-// It never changes or overwrites another player's
-// username reservation.
+async function ensureProfile(user) {
+  const existing = await getDoc(
+    profileRef(user.uid)
+  );
 
-async function ensureExistingProfile(user) {
-  const profileRef = profileReference(user.uid);
-
-  const profile = await getDoc(profileRef);
-
-  if (profile.exists()) {
-    return profile.data().username;
+  if (existing.exists()) {
+    return existing.data().username;
   }
 
-  const oldUsername = (user.displayName || "").trim();
+  const oldUsername = (
+    user.displayName || ""
+  ).trim();
 
-  if (!validateUsername(oldUsername)) {
+  if (!validUsername(oldUsername)) {
     throw new Error(
-      "Your older account needs a valid username. Contact the QuestBlox administrator before continuing."
+      "Your account does not have a completed QuestBlox username profile. Contact the QuestBlox administrator."
     );
   }
 
-  try {
-    return await reserveUsername(user, oldUsername);
+  // Only older accounts with a valid displayName
+  // are eligible for this migration.
 
-  } catch (error) {
-    if (
-      error.code === "permission-denied" ||
-      error.message?.includes("already taken")
-    ) {
-      throw new Error(
-        "Your existing username could not be reserved. It may already belong to another account. Contact the QuestBlox administrator."
-      );
-    }
-
-    throw error;
-  }
+  return await reserveUsername(
+    user,
+    oldUsername
+  );
 }
 
-// ===============================================
+// ============================================
 // PERSISTENT LOGIN
-// ===============================================
+// ============================================
 
 const persistenceReady = setPersistence(
   auth,
   browserLocalPersistence
-).catch(error => {
-  console.error("Persistence error:", error);
-  throw error;
-});
+);
 
-// ===============================================
-// AUTHENTICATION STATE
-// ===============================================
+// ============================================
+// AUTH STATE
+// ============================================
 
 onAuthStateChanged(auth, async user => {
+  const version = ++authStateVersion;
+
   if (!user) {
-    $("authGate").hidden = false;
-    $("siteShell").hidden = true;
-    $("accountName").textContent = "";
+    showLogin();
     return;
   }
 
-  $("accountName").textContent =
-    user.displayName || user.email || "Player";
+  // Firebase Auth can emit its first signup event
+  // before the Firestore batch has completed.
+  // The registration handler finishes that work.
 
-  $("authGate").hidden = true;
-  $("siteShell").hidden = false;
-
-  // Existing-account migration is attempted only
-  // after a player has authenticated successfully.
+  if (registrationInProgress) {
+    return;
+  }
 
   try {
-    const username = await ensureExistingProfile(user);
+    const username = await ensureProfile(user);
 
-    if (auth.currentUser?.uid === user.uid) {
-      $("accountName").textContent = username;
-    }
+    if (
+      version !== authStateVersion ||
+      auth.currentUser?.uid !== user.uid
+    ) return;
+
+    showWebsite(username);
 
   } catch (error) {
     console.error(
-      "Profile reservation issue:",
+      "QuestBlox profile error:",
       error
     );
 
-    if (auth.currentUser?.uid === user.uid) {
-      $("accountName").textContent =
-        user.displayName || "Player";
+    if (
+      version !== authStateVersion ||
+      auth.currentUser?.uid !== user.uid
+    ) return;
 
-      // Do not sign the player out or delete an
-      // existing account because of a migration issue.
-      alert(error.message);
-    }
+    // Keep the account recoverable rather than
+    // automatically deleting its Auth record.
+
+    showWebsite(
+      user.displayName || "Player"
+    );
+
+    alert(error.message);
   }
 });
 
-// ===============================================
+// ============================================
 // REGISTER / SIGN IN
-// ===============================================
+// ============================================
 
 $("authForm").addEventListener(
   "submit",
@@ -379,81 +376,89 @@ $("authForm").addEventListener(
 
     busy = true;
 
+    const signup = creatingAccount;
+
     const email = $("authEmail").value.trim();
     const password = $("authPassword").value;
 
     $("authSubmit").disabled = true;
-    $("authMessage").textContent = "Please wait...";
+    message("Please wait...");
 
     try {
       await persistenceReady;
 
-      if (creatingAccount) {
+      if (signup) {
         const username = $("authUsername").value.trim();
-        const confirmation = $("authConfirm").value;
 
-        if (!validateUsername(username)) {
+        const confirmation =
+          $("authConfirm").value;
+
+        if (!validUsername(username)) {
           throw new Error(
             "Username must contain 3–20 letters, numbers or underscores."
           );
         }
 
         if (password !== confirmation) {
-          throw new Error("Passwords do not match.");
+          throw new Error(
+            "Passwords do not match."
+          );
         }
 
-        // Early check before creating an Auth account.
+        // Availability check before creating
+        // the Firebase Auth account.
 
-        const usernameDoc = await getDoc(
-          usernameReference(username)
+        const nameSnapshot = await getDoc(
+          usernameRef(username)
         );
 
-        if (usernameDoc.exists()) {
+        if (nameSnapshot.exists()) {
           throw new Error(
-            "That username is already taken. Choose another."
+            "That username is already taken."
           );
         }
 
-        // Firebase Auth enforces email uniqueness.
+        registrationInProgress = true;
 
-        const result =
-          await createUserWithEmailAndPassword(
-            auth,
-            email,
-            password
-          );
-
-        // A newly created Firebase Auth account is
-        // now available. Reserve the username securely.
+        let createdUser = null;
 
         try {
-          const reservedUsername =
+          const credential =
+            await createUserWithEmailAndPassword(
+              auth,
+              email,
+              password
+            );
+
+          createdUser = credential.user;
+
+          const reservedName =
             await reserveUsername(
-              result.user,
+              createdUser,
               username
             );
 
-          await updateProfile(result.user, {
-            displayName: reservedUsername
+          await updateProfile(createdUser, {
+            displayName: reservedName
           });
 
-          $("accountName").textContent =
-            reservedUsername;
+          showWebsite(reservedName);
 
-        } catch (reservationError) {
-          console.error(
-            "Username reservation error:",
-            reservationError
-          );
+        } catch (error) {
+          if (createdUser) {
+            // Never automatically delete the account:
+            // an interrupted Firestore commit can
+            // leave an uncertain outcome.
 
-          // Do not delete a newly created account
-          // automatically: a network interruption may
-          // leave the outcome of the Firestore commit
-          // uncertain. Keep the account recoverable.
+            throw new Error(
+              "Your authentication account was created, but profile setup may be incomplete. Sign in again using the same email and password. If this continues, contact the QuestBlox administrator."
+            );
+          }
 
-          throw new Error(
-            "Your authentication account was created, but username setup could not be completed. Sign in again with the same email and password. If the problem continues, contact the QuestBlox administrator."
-          );
+          throw error;
+
+        } finally {
+          registrationInProgress = false;
         }
 
       } else {
@@ -465,7 +470,7 @@ $("authForm").addEventListener(
       }
 
       $("authForm").reset();
-      $("authMessage").textContent = "";
+      message("");
 
     } catch (error) {
       console.error(
@@ -473,19 +478,19 @@ $("authForm").addEventListener(
         error
       );
 
-      $("authMessage").textContent =
-        readableError(error);
+      message(readableError(error));
 
     } finally {
+      registrationInProgress = false;
       busy = false;
       $("authSubmit").disabled = false;
     }
   }
 );
 
-// ===============================================
+// ============================================
 // PASSWORD RESET
-// ===============================================
+// ============================================
 
 $("resetPassword").addEventListener(
   "click",
@@ -493,48 +498,51 @@ $("resetPassword").addEventListener(
     const email = $("authEmail").value.trim();
 
     if (!email) {
-      $("authMessage").textContent =
-        "Enter your email address first.";
+      message("Enter your email address first.");
       return;
     }
 
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(
+        auth,
+        email
+      );
 
-      $("authMessage").textContent =
-        "If an account exists, a reset email will be sent.";
+      message(
+        "If an account exists, a reset email will be sent."
+      );
 
     } catch (error) {
       console.error(error);
 
-      $("authMessage").textContent =
-        "Unable to send a reset email. Please try again.";
+      message(
+        "Unable to send a reset email. Try again."
+      );
     }
   }
 );
 
-// ===============================================
+// ============================================
 // SIGN OUT
-// ===============================================
+// ============================================
 
 $("signOut").addEventListener(
   "click",
   async () => {
     try {
       await signOut(auth);
-
     } catch (error) {
       console.error(error);
 
       alert(
-        "Unable to sign out. Please try again."
+        "Unable to sign out. Try again."
       );
     }
   }
 );
 
-// ===============================================
+// ============================================
 // INITIAL MODE
-// ===============================================
+// ============================================
 
 switchMode(false);
