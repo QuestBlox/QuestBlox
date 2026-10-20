@@ -4,9 +4,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ============================================
-    // HELPERS
-    // ============================================
+    // =========================================
+    // GENERAL HELPERS
+    // =========================================
 
     function signedIn() {
       return request.auth != null;
@@ -39,6 +39,14 @@ service cloud.firestore {
       return /databases/$(database)/documents/users/$(uid);
     }
 
+    function friendshipPath(pairId) {
+      return /databases/$(database)/documents/friendships/$(pairId);
+    }
+
+    // =========================================
+    // USERNAME VALIDATION
+    // =========================================
+
     function validUsernameRecord(key) {
       return signedIn() &&
 
@@ -65,11 +73,14 @@ service cloud.firestore {
           request.resource.data.username
         ) &&
 
-        request.resource.data.usernameKey == key &&
+        request.resource.data.usernameKey ==
+          key &&
 
-        request.resource.data.username.lower() == key &&
+        request.resource.data.username.lower() ==
+          key &&
 
-        request.resource.data.createdAt == request.time;
+        request.resource.data.createdAt ==
+          request.time;
     }
 
     function validProfileRecord(uid) {
@@ -89,7 +100,8 @@ service cloud.firestore {
           'createdAt'
         ]) &&
 
-        request.resource.data.uid == uid &&
+        request.resource.data.uid ==
+          uid &&
 
         validUsername(
           request.resource.data.username
@@ -102,35 +114,36 @@ service cloud.firestore {
         request.resource.data.username.lower() ==
           request.resource.data.usernameKey &&
 
-        request.resource.data.createdAt == request.time;
+        request.resource.data.createdAt ==
+          request.time;
     }
 
-    // ============================================
-    // UNIQUE USERNAME RESERVATIONS
-    // ============================================
+    // =========================================
+    // TASK 2 — USERNAME RESERVATIONS
+    // =========================================
 
     match /usernames/{usernameKey} {
 
-      // Allows signed-in players to check whether
-      // a particular username is already reserved.
-      // Do not expose email addresses here.
+      // Public exact-document reads allow
+      // username checking before registration.
+      //
+      // These records must never contain
+      // private emails or passwords.
 
-      allow get: if signedIn();
-
-      // Do not permit downloading the entire
-      // username collection.
+      allow get: if true;
 
       allow list: if false;
 
-      // Username record must match the player's
-      // profile created in the SAME atomic batch.
+      // Username and profile must be created
+      // together in the same atomic batch.
 
       allow create: if
         validUsernameRecord(usernameKey) &&
 
         getAfter(
           profilePath(request.auth.uid)
-        ).data.uid == request.auth.uid &&
+        ).data.uid ==
+          request.auth.uid &&
 
         getAfter(
           profilePath(request.auth.uid)
@@ -139,32 +152,26 @@ service cloud.firestore {
 
         getAfter(
           profilePath(request.auth.uid)
-        ).data.usernameKey == usernameKey &&
+        ).data.usernameKey ==
+          usernameKey &&
 
         getAfter(
           profilePath(request.auth.uid)
-        ).data.createdAt == request.time;
-
-      // Nobody can overwrite, rename or delete
-      // a reserved username from the browser.
+        ).data.createdAt ==
+          request.time;
 
       allow update, delete: if false;
     }
 
-    // ============================================
-    // PLAYER PROFILES
-    // ============================================
+    // =========================================
+    // TASK 2 — PLAYER PROFILES
+    // =========================================
 
     match /users/{uid} {
-
-      // Players can read their own profile.
 
       allow get: if isOwner(uid);
 
       allow list: if false;
-
-      // Profile creation requires a matching
-      // username reservation in the SAME batch.
 
       allow create: if
         validProfileRecord(uid) &&
@@ -173,7 +180,8 @@ service cloud.firestore {
           usernamePath(
             request.resource.data.usernameKey
           )
-        ).data.uid == uid &&
+        ).data.uid ==
+          uid &&
 
         getAfter(
           usernamePath(
@@ -193,21 +201,236 @@ service cloud.firestore {
           usernamePath(
             request.resource.data.usernameKey
           )
-        ).data.createdAt == request.time;
+        ).data.createdAt ==
+          request.time;
 
-      // Locked until we implement secure profile
-      // editing in a later QuestBlox task.
+      // Browser users cannot edit their own
+      // identity or award themselves XP.
 
       allow update, delete: if false;
+
+      // ======================================
+      // VERIFIED QUEST CLAIMS — RESERVED
+      // ======================================
+
+      match /questClaims/{questId} {
+
+        allow get, list: if isOwner(uid);
+
+        // Only trusted server code will
+        // create these records later.
+
+        allow create, update, delete: if false;
+      }
     }
 
-    // ============================================
-    // EVERYTHING ELSE REMAINS LOCKED
-    // ============================================
+    // =========================================
+    // TASK 4 — FRIENDSHIP HELPERS
+    // =========================================
+
+    function friendshipFieldsValid() {
+      return request.resource.data.keys().hasAll([
+        'members',
+        'senderUid',
+        'receiverUid',
+        'senderUsername',
+        'receiverUsername',
+        'status',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+
+      request.resource.data.keys().hasOnly([
+        'members',
+        'senderUid',
+        'receiverUid',
+        'senderUsername',
+        'receiverUsername',
+        'status',
+        'createdAt',
+        'updatedAt'
+      ]);
+    }
+
+    function validFriendshipCreate(pairId) {
+      return signedIn() &&
+
+        friendshipFieldsValid() &&
+
+        request.resource.data.senderUid
+          is string &&
+
+        request.resource.data.receiverUid
+          is string &&
+
+        request.resource.data.senderUsername
+          is string &&
+
+        request.resource.data.receiverUsername
+          is string &&
+
+        request.resource.data.members is list &&
+
+        request.resource.data.members.size() ==
+          2 &&
+
+        request.resource.data.senderUid ==
+          request.auth.uid &&
+
+        request.resource.data.senderUid !=
+          request.resource.data.receiverUid &&
+
+        // Both members must be stored in
+        // canonical sorted order.
+
+        request.resource.data.members.hasAll([
+          request.resource.data.senderUid,
+          request.resource.data.receiverUid
+        ]) &&
+
+        request.resource.data.members[0] <
+          request.resource.data.members[1] &&
+
+        pairId ==
+          request.resource.data.members[0] +
+          '_' +
+          request.resource.data.members[1] &&
+
+        request.resource.data.status ==
+          'pending' &&
+
+        request.resource.data.createdAt ==
+          request.time &&
+
+        request.resource.data.updatedAt ==
+          request.time &&
+
+        // Sender must use their real,
+        // reserved QuestBlox username.
+
+        get(
+          profilePath(request.auth.uid)
+        ).data.username ==
+          request.resource.data.senderUsername &&
+
+        // Receiver must be the actual owner
+        // of the reserved username.
+
+        validUsername(
+          request.resource.data.receiverUsername
+        ) &&
+
+        get(
+          usernamePath(
+            request.resource.data.receiverUsername.lower()
+          )
+        ).data.uid ==
+          request.resource.data.receiverUid &&
+
+        get(
+          usernamePath(
+            request.resource.data.receiverUsername.lower()
+          )
+        ).data.username ==
+          request.resource.data.receiverUsername;
+    }
+
+    function friendshipParticipant() {
+      return signedIn() &&
+
+        request.auth.uid in
+          resource.data.members;
+    }
+
+    function validFriendshipAcceptance() {
+      return friendshipParticipant() &&
+
+        resource.data.status ==
+          'pending' &&
+
+        request.auth.uid ==
+          resource.data.receiverUid &&
+
+        request.resource.data.status ==
+          'accepted' &&
+
+        request.resource.data.diff(
+          resource.data
+        ).affectedKeys().hasOnly([
+          'status',
+          'updatedAt'
+        ]) &&
+
+        request.resource.data.updatedAt ==
+          request.time;
+    }
+
+    // =========================================
+    // TASK 4 — FRIENDSHIPS
+    // =========================================
+
+    match /friendships/{pairId} {
+
+      // Participants can read their relationship.
+      //
+      // A signed-in user may also check whether
+      // a specific relationship ID does not exist.
+      // This supports player search without
+      // exposing an existing private relationship
+      // to unrelated accounts.
+
+      allow get: if signedIn() && (
+        !exists(friendshipPath(pairId)) ||
+        friendshipParticipant()
+      );
+
+      // Queries must constrain membership
+      // to the current signed-in user's UID.
+
+      allow list: if friendshipParticipant();
+
+      // Only the sender can create a new
+      // pending request with valid identities.
+
+      allow create: if
+        validFriendshipCreate(pairId);
+
+      // Only the intended recipient can
+      // accept a pending request.
+
+      allow update: if
+        validFriendshipAcceptance();
+
+      // Either participant can decline,
+      // cancel or remove the relationship.
+
+      allow delete: if
+        friendshipParticipant();
+    }
+
+    // =========================================
+    // VERIFIED LEADERBOARD — FUTURE BACKEND
+    // =========================================
+
+    match /publicLeaderboard/{uid} {
+
+      allow get: if signedIn();
+
+      allow list: if signedIn() &&
+        request.query.limit != null &&
+        request.query.limit <= 20;
+
+      // Browser users cannot forge rankings.
+
+      allow create, update, delete: if false;
+    }
+
+    // =========================================
+    // DEFAULT DENY
+    // =========================================
 
     match /{document=**} {
       allow read, write: if false;
     }
-
   }
 }
