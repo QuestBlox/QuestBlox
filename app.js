@@ -1,40 +1,111 @@
 
-const gameGrid = document.getElementById("gameGrid");
-const gameSearch = document.getElementById("gameSearch");
-const noGames = document.getElementById("noGames");
+/*
+  QUESTBLOX APP.JS — GAME RENDERING FIX
 
-let activeCategory = "all";
+  Uses the actual IDs from your index.html:
+  gameGrid, gameSearch, noGames, games
 
-function renderGames() {
-  const query = gameSearch.value.trim().toLowerCase();
+  Featured Games come from QUESTBLOX_GAMES.
+  Quick Playable Games come from QPG_GAMES
+  and the renderer in games.js.
+*/
 
-  const filtered = QUESTBLOX_GAMES.filter(game => {
-    const categoryMatch =
-      activeCategory === "all" ||
-      game.category === activeCategory;
+(function () {
+  "use strict";
 
-    const searchableText = [
-      game.title,
-      game.description,
-      game.category
-    ].join(" ").toLowerCase();
+  const gameGrid = document.getElementById("gameGrid");
+  const gameSearch = document.getElementById("gameSearch");
+  const noGames = document.getElementById("noGames");
+  const gamesSection = document.getElementById("games");
 
-    return categoryMatch && searchableText.includes(query);
-  });
+  let activeCategory = "all";
 
-  gameGrid.replaceChildren();
+  const categoryNames = {
+    action: "Action",
+    puzzle: "Puzzle",
+    adventure: "Adventure",
+    sports: "Sports",
+    racing: "Racing",
+    multiplayer: "Multiplayer",
+    "3d": "3D Games"
+  };
 
-  filtered.forEach(game => {
+  // =========================================
+  // CHECK REQUIRED ELEMENTS
+  // =========================================
+
+  if (!gameGrid || !gameSearch || !noGames || !gamesSection) {
+    console.error(
+      "[QuestBlox] Game rendering failed: one or more game elements are missing.",
+      {
+        gameGrid: !!gameGrid,
+        gameSearch: !!gameSearch,
+        noGames: !!noGames,
+        gamesSection: !!gamesSection
+      }
+    );
+
+    return;
+  }
+
+  // =========================================
+  // OPEN A GAME
+  // =========================================
+
+  function launchGame(game) {
+    const siteShell = document.getElementById("siteShell");
+
+    if (siteShell && siteShell.hidden) {
+      return;
+    }
+
+    try {
+      const url = new URL(game.url);
+
+      if (url.protocol !== "https:") {
+        throw new Error("Only HTTPS game links are supported.");
+      }
+
+      const newWindow = window.open(
+        url.href,
+        "_blank",
+        "noopener,noreferrer"
+      );
+
+      if (!newWindow) {
+        console.info(
+          "[QuestBlox] Browser may have blocked the new game tab."
+        );
+      }
+    } catch (error) {
+      console.error(
+        "[QuestBlox] Unable to launch game:",
+        error
+      );
+
+      alert("This game link is currently unavailable.");
+    }
+  }
+
+  // =========================================
+  // CREATE A FEATURED GAME CARD
+  // =========================================
+
+  function createGameCard(game) {
     const card = document.createElement("article");
     card.className = "game-card";
 
     const icon = document.createElement("div");
     icon.className = "game-icon";
-    icon.textContent = game.icon;
+    icon.textContent = game.icon || "🎮";
 
     const category = document.createElement("span");
     category.className = "game-category";
-    category.textContent = game.category.toUpperCase();
+
+    category.textContent =
+      categoryNames[game.category] ||
+      game.category ||
+      "Game";
 
     const title = document.createElement("h3");
     title.textContent = game.title;
@@ -47,7 +118,9 @@ function renderGames() {
     playButton.className = "play-btn";
     playButton.textContent = "Play Now";
 
-    playButton.addEventListener("click", () => launchGame(game));
+    playButton.addEventListener("click", function () {
+      launchGame(game);
+    });
 
     card.append(
       icon,
@@ -57,48 +130,126 @@ function renderGames() {
       playButton
     );
 
-    gameGrid.appendChild(card);
-  });
+    return card;
+  }
 
-  noGames.hidden = filtered.length !== 0;
-}
+  // =========================================
+  // RENDER FEATURED GAMES
+  // =========================================
 
-// Category filters
-document.querySelectorAll("[data-filter]").forEach(button => {
-  button.addEventListener("click", () => {
-    activeCategory = button.dataset.filter;
+  function renderGames() {
+    if (
+      typeof QUESTBLOX_GAMES === "undefined" ||
+      !Array.isArray(QUESTBLOX_GAMES)
+    ) {
+      console.error(
+        "[QuestBlox] QUESTBLOX_GAMES is missing. Check games.js."
+      );
 
-    document.querySelectorAll("[data-filter]").forEach(other => {
-      other.classList.toggle("active", other === button);
-    });
+      gameGrid.replaceChildren();
 
-    renderGames();
+      noGames.hidden = false;
+      noGames.textContent =
+        "Games could not load. Please refresh the page.";
 
-    document.getElementById("games").scrollIntoView({
-      behavior: "smooth"
-    });
-  });
-});
-
-// Live search
-gameSearch.addEventListener("input", renderGames);
-
-// Open games in a new tab
-function launchGame(game) {
-  if (document.getElementById("siteShell").hidden) return;
-
-  try {
-    const url = new URL(game.url);
-
-    if (url.protocol !== "https:") {
-      throw new Error("Only HTTPS game links are supported.");
+      return;
     }
 
-    window.open(url.href, "_blank", "noopener,noreferrer");
-  } catch (error) {
-    console.error("Unable to launch game:", error);
-    alert("This game link is currently unavailable.");
-  }
-}
+    const query = gameSearch.value
+      .trim()
+      .toLowerCase();
 
-renderGames();
+    const filtered = QUESTBLOX_GAMES.filter(function (game) {
+      const categoryMatch =
+        activeCategory === "all" ||
+        game.category === activeCategory;
+
+      const searchableText = [
+        game.title,
+        game.description,
+        game.category
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return (
+        categoryMatch &&
+        searchableText.includes(query)
+      );
+    });
+
+    const fragment = document.createDocumentFragment();
+
+    filtered.forEach(function (game) {
+      fragment.appendChild(createGameCard(game));
+    });
+
+    gameGrid.replaceChildren(fragment);
+
+    noGames.hidden = filtered.length > 0;
+
+    if (filtered.length === 0) {
+      noGames.textContent =
+        "No featured games found. Try another search or category.";
+    }
+
+    console.info(
+      "[QuestBlox] Featured games displayed:",
+      filtered.length
+    );
+  }
+
+  // =========================================
+  // FEATURED GAME CATEGORY FILTERS
+  // =========================================
+
+  document
+    .querySelectorAll("[data-filter]")
+    .forEach(function (button) {
+      button.addEventListener("click", function () {
+        activeCategory = button.dataset.filter || "all";
+
+        document
+          .querySelectorAll("[data-filter]")
+          .forEach(function (other) {
+            other.classList.toggle(
+              "active",
+              other === button
+            );
+          });
+
+        renderGames();
+
+        if (typeof window.qbOpenPage === "function") {
+          window.qbOpenPage("games");
+        } else {
+          gamesSection.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+          });
+        }
+      });
+    });
+
+  // =========================================
+  // FEATURED GAME LIVE SEARCH
+  // =========================================
+
+  gameSearch.addEventListener("input", renderGames);
+
+  // =========================================
+  // INITIAL RENDER
+  // =========================================
+
+  renderGames();
+
+  // Keep compatibility with any other
+  // QuestBlox scripts that call these functions.
+
+  window.renderGames = renderGames;
+  window.launchGame = launchGame;
+
+  console.info(
+    "[QuestBlox] Games app initialized successfully."
+  );
+})();
